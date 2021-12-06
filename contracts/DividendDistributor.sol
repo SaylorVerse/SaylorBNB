@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./Interfaces/IDividendDistributor.sol";
+import "./interfaces/IDividendDistributor.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
@@ -20,8 +20,8 @@ contract DividendDistributor is IDividendDistributor {
         uint256 totalRealised;
     }
 
-    ERC20 BUSD = ERC20(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
-    address WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    // address WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;// WBNB testnet BSC
     IUniswapV2Router02 uniswapV2Router;
 
     address[] shareholders;
@@ -82,20 +82,20 @@ contract DividendDistributor is IDividendDistributor {
     }
 
     function deposit() external payable override onlyToken {
-        uint256 balanceBefore = BUSD.balanceOf(address(this));
+        uint256 balanceBefore = address(this).balance;
 
-        address[] memory path = new address[](2);
-        path[0] = WBNB;
-        path[1] = address(BUSD);
+        // address[] memory path = new address[](2);
+        // path[0] = WBNB;
+        // path[1] = address(BUSD);
 
-        uniswapV2Router .swapExactETHForTokensSupportingFeeOnTransferTokens{value: msg.value}(
-            0,
-            path,
-            address(this),
-            block.timestamp
-        );
+        // uniswapV2Router .swapExactETHForTokensSupportingFeeOnTransferTokens{value: msg.value}(
+        //     0,
+        //     path,
+        //     address(this),
+        //     block.timestamp
+        // );
 
-        uint256 amount = BUSD.balanceOf(address(this)).sub(balanceBefore);
+        uint256 amount = address(this).balance.sub(balanceBefore);
 
         totalDividends = totalDividends.add(amount);
         dividendsPerShare = dividendsPerShare.add(dividendsPerShareAccuracyFactor.mul(amount).div(totalShares));
@@ -138,7 +138,8 @@ contract DividendDistributor is IDividendDistributor {
         uint256 amount = getUnpaidEarnings(shareholder);
         if(amount > 0){
             totalDistributed = totalDistributed.add(amount);
-            BUSD.transfer(shareholder, amount);
+            //BUSD.transfer(shareholder, amount);
+            payable(shareholder).transfer(amount);
             shareholderClaims[shareholder] = block.timestamp;
             shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
             shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);

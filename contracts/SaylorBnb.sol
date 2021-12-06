@@ -63,7 +63,6 @@ contract SaylorBnB is IERC20, Ownable{
     modifier swapping() { inSwap = true; _; inSwap = false; }
 
     event AutoLiquify(uint256 amountBNB, uint256 amountBOG);
-    event BuybackMultiplierActive(uint256 duration);
 
     constructor () {
         //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E); //pancakeswap
@@ -195,7 +194,24 @@ contract SaylorBnB is IERC20, Ownable{
         return _transferFrom(sender, recipient, amount);
     }
 
+
+     /**
+     * @dev Moves `amount` of tokens from `sender` to `recipient`.
+     *
+     * 
+     *
+     * Emits a {Transfer} event.
+     *
+     * Requirements:
+     *
+     * - `sender` cannot be the zero address.
+     * - `recipient` cannot be the zero address.
+     * - `sender` must have a balance of at least `amount`.
+     */
+
     function _transferFrom(address sender, address recipient, uint256 amount) internal returns (bool) {
+        require(sender != address(0), "SBNB: transfer from address 0");
+        require(recipient != address(0), "SBNB: transfer to address 0 ");
         if(inSwap){ return _basicTransfer(sender, recipient, amount); }
 
         checkTxLimit(sender, amount);
@@ -219,13 +235,15 @@ contract SaylorBnB is IERC20, Ownable{
     }
 
     function _basicTransfer(address sender, address recipient, uint256 amount) internal returns (bool) {
-        _balances[sender] = _balances[sender].sub(amount, "Insufficient Balance");
+        _balances[sender] = _balances[sender].sub(amount, "insufficient Balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
         return true;
     }
 
-
+ /**
+     * @dev Checks for transaction limit
+     */
 
     function checkTxLimit(address sender, uint256 amount) internal view {
         require(amount <= _maxTxAmount || isTxLimitExempt[sender], "TX Limit Exceeded");
@@ -236,8 +254,12 @@ contract SaylorBnB is IERC20, Ownable{
     }
 
     function getTotalFee(bool selling) public view returns (uint256) {
-        if(launchedAt + 1 >= block.number){ return feeDenominator.sub(1); }
-        if(selling){ return getMultipliedFee(); }
+        if(launchedAt + 1 >= block.number){ 
+            return feeDenominator.sub(1);
+        }
+        if(selling){ 
+            return getMultipliedFee(); 
+        }
         return totalFee;
     }
 
