@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
-import "@openzeppelin/contracts/utils/math/safeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./DividendDistributor.sol";
 
 contract SaylorBnB is IERC20, Ownable{
@@ -57,8 +57,8 @@ contract SaylorBnB is IERC20, Ownable{
     uint256 distributorGas = 500000;
 
     bool public swapEnabled = true;
-   // uint256 public swapThreshold = _totalSupply / 2000; // 0.005%
-    uint256 public swapThreshold = _totalSupply / 100000;
+    uint256 public swapThreshold = _totalSupply / 2000; // 0.005%
+    
     bool inSwap;
     modifier swapping() { inSwap = true; _; inSwap = false; }
 
@@ -97,29 +97,96 @@ contract SaylorBnB is IERC20, Ownable{
         emit Transfer(address(0), msg.sender, _totalSupply);
     }
 
-    receive() external payable { }
+    receive() external payable {
 
-    function totalSupply() external view override returns (uint256) { return _totalSupply; }
-    function decimals() external pure  returns (uint8) { return _decimals; }
-    function symbol() external pure  returns (string memory) { return _symbol; }
-    function name() external pure  returns (string memory) { return _name; }
-    function balanceOf(address account) public view override returns (uint256) { return _balances[account]; }
-    function allowance(address holder, address spender) external view override returns (uint256) { return _allowances[holder][spender]; }
+     }
 
+    /// @dev Returns the amount of token in existence
+    function totalSupply() external view override returns (uint256) { 
+        return _totalSupply;
+    }
+
+    /// @dev Returns the number of decimals used to get its user representation.
+    /// For example, if `decimals` equals `2`, a balance of `505` tokens should
+    /// be displayed to a user as `5.05` (`505 / 10 ** 2`).
+    function decimals() external pure  returns (uint8) { 
+        return _decimals; 
+    }
+    
+    /// @dev Returns the symbol of the Token, usually a shorter version of the name
+    function symbol() external pure  returns (string memory) {
+        return _symbol; 
+    }
+
+    /// @dev Returns the Name of the Token
+    function name() external pure  returns (string memory) { 
+        return _name;
+    }
+
+    /// @dev Returns the amount of tokens owned by `account`.
+    function balanceOf(address account) public view override returns (uint256) { 
+        return _balances[account];
+    }
+
+    /**
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `holder` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
+     */
+    function allowance(address holder, address spender) external view override returns (uint256) {
+         return _allowances[holder][spender]; 
+    }
+
+/**
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * IMPORTANT: Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an {Approval} event.
+     */
     function approve(address spender, uint256 amount) public override returns (bool) {
         _allowances[msg.sender][spender] = amount;
         emit Approval(msg.sender, spender, amount);
         return true;
     }
 
+/**
+    * @dev Sets 'totalSupply' as the allowance of the 'spender' over the caller's tokens.
+    * Returns a boolean value indicating whether the operation succeeded.
+    */
     function approveMax(address spender) external returns (bool) {
         return approve(spender, _totalSupply);
     }
 
+/**
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
     function transfer(address recipient, uint256 amount) external override returns (bool) {
         return _transferFrom(msg.sender, recipient, amount);
     }
 
+/**
+     * @dev Moves `amount` tokens from `sender` to `recipient` using the
+     * allowance mechanism. `amount` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
     function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         if(_allowances[sender][msg.sender] != _totalSupply){
             _allowances[sender][msg.sender] = _allowances[sender][msg.sender].sub(amount, "Insufficient Allowance");
@@ -154,7 +221,7 @@ contract SaylorBnB is IERC20, Ownable{
     function _basicTransfer(address sender, address recipient, uint256 amount) internal returns (bool) {
         _balances[sender] = _balances[sender].sub(amount, "Insufficient Balance");
         _balances[recipient] = _balances[recipient].add(amount);
-//        emit Transfer(sender, recipient, amount);
+        emit Transfer(sender, recipient, amount);
         return true;
     }
 
