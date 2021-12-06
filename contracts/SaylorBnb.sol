@@ -14,7 +14,7 @@ contract SaylorBnB is IERC20, Ownable{
     using SafeMath for uint256;
 
     uint256 public constant MASK = type(uint128).max;
-    //address public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
     address DEAD_NON_CHECKSUM = 0x000000000000000000000000000000000000dEaD;
@@ -34,6 +34,7 @@ contract SaylorBnB is IERC20, Ownable{
     mapping (address => bool) isDividendExempt;
 
     uint256 liquidityFee = 300;
+    uint256 buybackFee = 200;
     uint256 reflectionFee = 700;
     uint256 marketingFee = 400;
     uint256 totalFee = 1400;
@@ -44,6 +45,19 @@ contract SaylorBnB is IERC20, Ownable{
 
     uint256 targetLiquidity = 25;
     uint256 targetLiquidityDenominator = 100;
+
+    uint256 buybackMultiplierNumerator = 200;
+    uint256 buybackMultiplierDenominator = 100;
+    uint256 buybackMultiplierTriggeredAt;
+    uint256 buybackMultiplierLength = 30 minutes;
+
+    bool public autoBuybackEnabled = false;
+    mapping (address => bool) buyBacker;
+    uint256 autoBuybackCap;
+    uint256 autoBuybackAccumulator;
+    uint256 autoBuybackAmount;
+    uint256 autoBuybackBlockPeriod;
+    uint256 autoBuybackBlockLast;
 
     IUniswapV2Router02 uniswapV2Router;
     address public uniswapV2Pair;
@@ -77,10 +91,10 @@ contract SaylorBnB is IERC20, Ownable{
         uniswapV2Pair = _uniswapV2Pair;
         
         _allowances[address(this)][address(uniswapV2Router)] = _totalSupply;
-        //WBNB = router.WETH();
+        WBNB = uniswapV2Router.WETH();
         distributor = new DividendDistributor();
         distributorAddress = address(distributor);
-
+        buyBacker[msg.sender] = true;
         isFeeExempt[msg.sender] = true;
         isTxLimitExempt[msg.sender] = true;
         isDividendExempt[uniswapV2Pair] = true;
@@ -293,7 +307,7 @@ contract SaylorBnB is IERC20, Ownable{
 
         address[] memory path = new address[](2);
         path[0] = address(this);
-        path[1] = uniswapV2Router.WETH();
+        path[1] = WBNB;
         uint256 balanceBefore = address(this).balance;
 
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -330,6 +344,44 @@ contract SaylorBnB is IERC20, Ownable{
         }
     }
 
+    function setAutoBuybackSettings(bool _enabled, uint256 _cap, uint256 _amount, uint256 _period) external onlyOwner {
+        autoBuybackEnabled = _enabled;
+        autoBuybackCap = _cap;
+        autoBuybackAccumulator = 0;
+        autoBuybackAmount = _amount;
+        autoBuybackBlockPeriod = _period;
+        autoBuybackBlockLast = block.number;
+    }
+
+    function shouldAutoBuyback() internal view returns (bool) {
+        return msg.sender != uniswapV2Pair
+        && !inSwap
+        && autoBuybackEnabled
+        && autoBuybackBlockLast + autoBuybackBlockPeriod <= block.number // After N blocks from last buyback
+        && address(this).balance >= autoBuybackAmount;
+    }
+
+    function triggerAutoBuyback() internal {
+        buyTokens(autoBuybackAmount, DEAD);
+        autoBuybackBlockLast = block.number;
+        autoBuybackAccumulator = autoBuybackAccumulator.add(autoBuybackAmount);
+        if(autoBuybackAccumulator > autoBuybackCap){ 
+                autoBuybackEnabled = false; 
+            }
+    }
+
+    function buyTokens(uint256 amount, address to) internal swapping {
+        address[] memory path = new address[](2);
+        path[0] = WBNB;
+        path[1] = address(this);
+
+        uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
+            0,
+            path,
+            to,
+            block.timestamp
+        );
+    }
 
     function launched() internal view returns (bool) {
         return launchedAt != 0;
