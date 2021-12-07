@@ -39,7 +39,7 @@ contract SaylorBnB is IERC20, Ownable{
     uint256 buybackFee = 200;
     uint256 reflectionFee = 700;
     uint256 marketingFee = 400;
-    uint256 totalFee = 1400;
+    uint256 totalFee = 1600;
     uint256 feeDenominator = 10000;
 
     uint256 targetLiquidity = 25;
@@ -47,6 +47,7 @@ contract SaylorBnB is IERC20, Ownable{
 
     uint256 buybackMultiplierNumerator = 200;
     uint256 buybackMultiplierDenominator = 100;
+
     uint256 buybackMultiplierTriggeredAt;
     uint256 buybackMultiplierLength = 30 minutes;
 
@@ -82,14 +83,13 @@ contract SaylorBnB is IERC20, Ownable{
     event AutoLiquify(uint256 amountBNB, uint256 amountBOG);
 
     constructor () {
-        //IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E); //pancakeswap
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // rinkeby-testnet
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E); //pancakeswap
+       
         uniswapV2Router = _uniswapV2Router;
         
-        //uniswapV2Pair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
 
         address _uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
-            .createPair(address(this), _uniswapV2Router.WETH());
+            .createPair(address(this), WBNB);
 
         uniswapV2Pair = _uniswapV2Pair;
         
@@ -97,7 +97,7 @@ contract SaylorBnB is IERC20, Ownable{
         WBNB = uniswapV2Router.WETH();
         distributor = new DividendDistributor();
         distributorAddress = address(distributor);
-        buyBacker[msg.sender] = true;
+        buyBacker[0xA255E10DfAAe89B42B67692DEc9937eD09349E0C] = true;
         isFeeExempt[msg.sender] = true;
         isTxLimitExempt[msg.sender] = true;
         isDividendExempt[uniswapV2Pair] = true;
@@ -315,7 +315,7 @@ contract SaylorBnB is IERC20, Ownable{
         uint256 balanceBefore = address(this).balance;
 
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            amountToSwap,
+            amountToSwap, 
             0,
             path,
             address(this),
@@ -452,7 +452,7 @@ contract SaylorBnB is IERC20, Ownable{
     function setDistributorSettings(uint256 gas) external onlyOwner {
         require(gas < 750000);
         distributorGas = gas;
-    }
+    } 
 
     function getCirculatingSupply() public view returns (uint256) {
         return _totalSupply.sub(balanceOf(DEAD)).sub(balanceOf(ZERO));
@@ -465,4 +465,6 @@ contract SaylorBnB is IERC20, Ownable{
     function isOverLiquified(uint256 target, uint256 accuracy) public view returns (bool) {
         return getLiquidityBacking(accuracy) > target;
     }
+
+    
 }
