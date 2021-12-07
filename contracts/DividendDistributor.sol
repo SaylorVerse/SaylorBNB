@@ -84,17 +84,6 @@ contract DividendDistributor is IDividendDistributor {
     function deposit() external payable override onlyToken {
         uint256 balanceBefore = address(this).balance;
 
-        // address[] memory path = new address[](2);
-        // path[0] = WBNB;
-        // path[1] = address(BUSD);
-
-        // uniswapV2Router .swapExactETHForTokensSupportingFeeOnTransferTokens{value: msg.value}(
-        //     0,
-        //     path,
-        //     address(this),
-        //     block.timestamp
-        // );
-
         uint256 amount = address(this).balance.sub(balanceBefore);
 
         totalDividends = totalDividends.add(amount);

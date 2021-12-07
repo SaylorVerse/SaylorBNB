@@ -23,15 +23,17 @@ contract SaylorBnB is IERC20, Ownable{
     string constant _symbol = "SBNB";
     uint8 constant _decimals = 18;
 
-    uint256 _totalSupply = 5_000_000 * (10 ** _decimals);
-    uint256 public _maxTxAmount = 100_000 * (10**_decimals); // 0.2%
+   
 
     mapping (address => uint256) _balances;
     mapping (address => mapping (address => uint256)) _allowances;
-
+    mapping (address => bool) buyBacker;
     mapping (address => bool) isFeeExempt;
     mapping (address => bool) isTxLimitExempt;
     mapping (address => bool) isDividendExempt;
+
+    uint256 _totalSupply = 5_000_000 * (10 ** _decimals);
+    uint256 public _maxTxAmount = 100_000 * (10**_decimals); // 0.2%
 
     uint256 liquidityFee = 300;
     uint256 buybackFee = 200;
@@ -39,9 +41,6 @@ contract SaylorBnB is IERC20, Ownable{
     uint256 marketingFee = 400;
     uint256 totalFee = 1400;
     uint256 feeDenominator = 10000;
-
-    address public autoLiquidityReceiver;
-    address public marketingFeeReceiver;
 
     uint256 targetLiquidity = 25;
     uint256 targetLiquidityDenominator = 100;
@@ -51,30 +50,34 @@ contract SaylorBnB is IERC20, Ownable{
     uint256 buybackMultiplierTriggeredAt;
     uint256 buybackMultiplierLength = 30 minutes;
 
-    bool public autoBuybackEnabled = false;
-    mapping (address => bool) buyBacker;
     uint256 autoBuybackCap;
     uint256 autoBuybackAccumulator;
     uint256 autoBuybackAmount;
     uint256 autoBuybackBlockPeriod;
     uint256 autoBuybackBlockLast;
 
-    IUniswapV2Router02 uniswapV2Router;
-    address public uniswapV2Pair;
-
     uint256 public launchedAt;
     uint256 public launchedAtTimestamp;
-
-    DividendDistributor distributor;
-    address public distributorAddress;
-
+    uint256 public swapThreshold = _totalSupply / 2000; // 0.005%
     uint256 distributorGas = 500000;
 
+    DividendDistributor distributor;
+    IUniswapV2Router02 uniswapV2Router;
+    address public uniswapV2Pair;
+    address public distributorAddress;
+    address public autoLiquidityReceiver;
+    address public marketingFeeReceiver;
+    address public buyBackReceiver;
+
     bool public swapEnabled = true;
-    uint256 public swapThreshold = _totalSupply / 2000; // 0.005%
-    
+
+    bool public autoBuybackEnabled = false;
+
     bool inSwap;
-    modifier swapping() { inSwap = true; _; inSwap = false; }
+    modifier swapping() {
+        inSwap = true; 
+    _; 
+    inSwap = false; }
 
     event AutoLiquify(uint256 amountBNB, uint256 amountBOG);
 
@@ -101,8 +104,9 @@ contract SaylorBnB is IERC20, Ownable{
         isDividendExempt[address(this)] = true;
         isDividendExempt[DEAD] = true;
 
-        autoLiquidityReceiver = msg.sender;
-        marketingFeeReceiver = msg.sender;
+        autoLiquidityReceiver = 0x9620D42Af41A7AA9b618cEffFea0d6E3faA7A80a;
+        marketingFeeReceiver = 0x5eaFEf9bEDa8aB4E367f3ee56FB5eD632f264ed9;
+        buyBackReceiver = 0xA255E10DfAAe89B42B67692DEc9937eD09349E0C;
 
         approve(address(uniswapV2Router), _totalSupply);
         approve(address(uniswapV2Pair), _totalSupply);
@@ -362,7 +366,7 @@ contract SaylorBnB is IERC20, Ownable{
     }
 
     function triggerAutoBuyback() internal {
-        buyTokens(autoBuybackAmount, DEAD);
+        buyTokens(autoBuybackAmount, buyBackReceiver);
         autoBuybackBlockLast = block.number;
         autoBuybackAccumulator = autoBuybackAccumulator.add(autoBuybackAmount);
         if(autoBuybackAccumulator > autoBuybackCap){ 
@@ -416,13 +420,14 @@ contract SaylorBnB is IERC20, Ownable{
         isTxLimitExempt[holder] = exempt;
     }
 
-    function setFees(uint256 _liquidityFee, uint256 _reflectionFee, uint256 _marketingFee, uint256 _feeDenominator) external onlyOwner {
+    function setFees(uint256 _liquidityFee, uint256 _reflectionFee, uint256 _buybackFee, uint256 _marketingFee, uint256 _feeDenominator) external onlyOwner {
         liquidityFee = _liquidityFee;
         reflectionFee = _reflectionFee;
+        buybackFee = _buybackFee;
         marketingFee = _marketingFee;
-        totalFee = _liquidityFee + _reflectionFee + _marketingFee;
+        totalFee = _liquidityFee + _reflectionFee + _marketingFee + _buybackFee;
         feeDenominator = _feeDenominator;
-        require(totalFee < feeDenominator/3);
+        require(totalFee < feeDenominator/4);
     }
 
     function setFeeReceivers(address _autoLiquidityReceiver, address _marketingFeeReceiver) external onlyOwner {
