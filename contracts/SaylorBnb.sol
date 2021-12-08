@@ -17,12 +17,10 @@ contract SaylorBnB is IERC20, Ownable{
     address public WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
-    address DEAD_NON_CHECKSUM = 0x000000000000000000000000000000000000dEaD;
 
     string constant _name = "SaylorBNB";
     string constant _symbol = "SBNB";
     uint8 constant _decimals = 18;
-
    
 
     mapping (address => uint256) _balances;
@@ -97,7 +95,7 @@ contract SaylorBnB is IERC20, Ownable{
         WBNB = uniswapV2Router.WETH();
         distributor = new DividendDistributor();
         distributorAddress = address(distributor);
-        buyBacker[0xA255E10DfAAe89B42B67692DEc9937eD09349E0C] = true;
+        buyBacker[msg.sender] = true;
         isFeeExempt[msg.sender] = true;
         isTxLimitExempt[msg.sender] = true;
         isDividendExempt[uniswapV2Pair] = true;
