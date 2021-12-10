@@ -20,8 +20,8 @@ contract DividendDistributor is IDividendDistributor {
         uint256 totalRealised;
     }
 
-    // address WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;// WBNB testnet BSC
+    address WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+ 
     IUniswapV2Router02 uniswapV2Router;
 
     address[] shareholders;
@@ -127,7 +127,7 @@ contract DividendDistributor is IDividendDistributor {
         uint256 amount = getUnpaidEarnings(shareholder);
         if(amount > 0){
             totalDistributed = totalDistributed.add(amount);
-            //BUSD.transfer(shareholder, amount);
+           
             payable(shareholder).transfer(amount);
             shareholderClaims[shareholder] = block.timestamp;
             shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
